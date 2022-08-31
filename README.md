@@ -1,11 +1,11 @@
 # OpenWrt
 
-For OpenWrt 21.02.3.  
+For OpenWrt 21.02.3.  <br>
 
-Syntax is: bandwidth_used.sh [arguments]
-Arguments are as follows:
-  -d --daily         Turnover is daily.  Default.
-  -w --weekly[=n]    Turnover is weekly.  Default is Sat(0).
+Syntax is: bandwidth_used.sh [arguments]<br>
+Arguments are as follows:<br>
+  -d --daily         Turnover is daily.  Default.<br>
+  -w --weekly[=n]    Turnover is weekly.  Default is Sat(0).<br>
   -m --monthly[=n]   Turnover is monthly. For day of month, use n. Default is first(1).
   -h --hour=n        Turnover hour, 00-23.  Default is 12.
   -s --spans=n       Look back this many turnover spans.  Default is 10.
