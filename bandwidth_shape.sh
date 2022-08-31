@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # ref: https://github.com/lynxthecat/cake-dual-ifb
-# package tc-full required
+# packages tc-full kmod-ifb kmod-sched-cake required
 
 DEV=`uci get bandwidthd.@bandwidthd[0].dev`
 BWIPSACT=X
