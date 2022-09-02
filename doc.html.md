@@ -1,18 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
-	<title></title>
-	<meta name="generator" content="LibreOffice 7.3.5.2 (Linux)"/>
-	<meta name="created" content="2022-08-29T13:43:03.426641555"/>
-	<meta name="changed" content="2022-08-31T08:38:58.757371449"/>
-	<style type="text/css">
-		@page { size: 8.5in 11in; margin: 0.79in }
-		p { line-height: 115%; margin-bottom: 0.1in; background: transparent }
-		a:link { color: #000080; so-language: zxx; text-decoration: underline }
-	</style>
-</head>
-<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p style="line-height: 100%; margin-bottom: 0in">
 <i><b>Introduction</b></i></p>
 <p style="line-height: 100%; margin-bottom: 0in"><br/>
 
