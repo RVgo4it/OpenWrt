@@ -192,6 +192,7 @@ view the data as charts, use the IP address of your router and </span><span styl
 will be something like <a href="http://192.168.188.1/bandwidthd">http://192.168.</a></span><a href="http://192.168.188.1/bandwidthd"><span style="font-style: normal">1</span></a><span style="font-style: normal"><a href="http://192.168.188.1/bandwidthd">.1/bandwidthd</a>.
  </span>
 </p>
+<img src='Bandwidthd-main.png'>
 <img src='bandwidthd-chart.png'>
 <p style="font-style: normal; line-height: 100%; margin-bottom: 0in"><br/>
 
