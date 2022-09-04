@@ -313,6 +313,7 @@ align='right'&gt;&quot; $4 &quot;&lt;/td&gt;&lt;/tr&gt;&quot;} } END
 I use the HTML version of the reports for a custom page under
 /www/bandwidthd and for emails.  
 </p>
+<img src='bandwidth-email.png'>
 <p style="line-height: 100%; margin-bottom: 0in"><br/>
 
 </p>
