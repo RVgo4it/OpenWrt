@@ -1,29 +1,41 @@
-***Introduction***
+![bandwidthd-chart](./images/bandwidthd-main.png)
 
-I have been using OpenWrt for years.  It’s on all my routers except one.  It still has Gargoyle.  I would like to switch it over to OpenWrt.  For that, I need to be able to report daily, weekly and monthly Internet data usage.  I also need to be able to report totals and for all or an IP subset like the smart TVs.  Also, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
+# Overview of bandwidthd
 
-I have not seen any posts here describing something like this.  I have been searching for awhile.  So, for the Gargoyle migration I made some notes and wrote some scripts.  I thought I would share.  Maybe someone has a similar need.  
+I have been using OpenWrt for years.
+It’s on all my routers except the one that still has Gargoyle.
+I would like to switch it over to OpenWrt.
 
-Scripts are available at https://github.com/RVgo4it/OpenWrt.  
+But I need to be able to report daily, weekly and monthly Internet data usage.  I also need to be able to report totals and for all or an IP subset like the smart TVs.  Also, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
 
-***Data Collection***
+I have been searching for a while for something like this
+so I can migrate the final router from Gargoyle.
+I have not seen any posts here describing the package.
+I made these notes and scripts for my Gargoyle migration, 
 
-To collect the data, I decided on “bandwidthd-sqlite”.  It has nice graphs and I can easily pull the details I need from the SQLite database.  
+## Choice of bandwidthd-sqlite
 
-To install, use these commands:
+I decided to use **bandwidthd-sqlite** to collect data.
+The package seems to be well-supported in OpenWrt.
+The router can display reports in a web browser.
+It has nice graphs and I can easily pull the details I need from the SQLite database.
+I have created several scripts to do this at [https://github.com/RVgo4it/OpenWrt](https://github.com/RVgo4it/OpenWrt).  
+
+## Installation and Configuration
+
+To install **bandwidthd-sqlite** on OpenWrt,
+use these commands:
 
 `opkg update; opkg install bandwidthd-sqlite sqlite3-cli`
 
-To configure, we need to stop the service and check the configuration.  Use the following commands:
-
+To configure, stop the service and adjust the configuration. Use the following commands:
 
 ```
 /etc/init.d/bandwidthd stop
 uci show bandwidthd
 ```
 
-Confirm the subnet and interface device is correct for the router.  If needed, adjust using commands like these:
-
+Confirm the subnet and interface device is correct for the router. If needed, adjust using commands like these:
 
 ```
 uci set bandwidthd.@bandwidthd[0].subnets='192.168.n.0/24'
@@ -31,14 +43,18 @@ uci set bandwidthd.@bandwidthd[0].dev='br-lan'
 uci commit bandwidthd
 ```
 
-We need to fine tune the data capture.  We just want data to/from the Internet.  For this, we’ll need some info from the network interface.  Use this command:
+**bandwidthd** should be configured to collect packets
+that pass through the router, ignoring traffic sent
+directly to or from the router.
+For this, we’ll need some info from the network interface.  Use this command:
+
 ```
- 
 ifconfig `uci get bandwidthd.@bandwidthd[0].dev`
 ```
  
-Make note of the MAC address and the IP address.  Edit and use the following configuration commands:
-
+Make note of the MAC address (_HWaddr_)
+and the IP address (_inet addr_).
+Edit and use the following configuration commands:
 
 ```
 uci set bandwidthd.@bandwidthd[0].filter='ip and ether host xx:xx:xx:xx:xx:xx and not host 192.168.n.1'
@@ -47,20 +63,27 @@ uci commit bandwidthd
 /etc/init.d/bandwidthd start
 ```
 
-The filter will tell “bandwidthd” to only look at packets sent to/from the router but the router was not the sender or receiver.  Basically, that’s default route packets.
+## Persisting the database
 
-The path for the SQLite database is actually under /tmp, so it will be lost during a power cycle of the router.  However, we need that data.  So, use a thumb drive to save it on a regular schedule.  Create a folder on it called “bandwidthd” and add the following to LuCI → System → Scheduled Tasks.  This example will run every 10 minutes.  Adjust path and schedule as needed.  
+The default path for the SQLite database is `/tmp`, so it will be lost during a power cycle of the router.  However, we need to preserve that data.
+Insert and [format a thumb drive.](https://openwrt.org/docs/guide-user/storage/usb-drives-quickstart)
+To save a copy of the database on a regular schedule,
+create a folder on the thumb drive called `bandwidthd` and enter the following commands to **LuCI → System → Scheduled Tasks** (adjust path and schedule as needed.)
+They save a copy of the database every 10 minutes.  
 
 ```
 */10 * * * * DEST=/mnt/sda1/bandwidthd/stats.db;rm $DEST;sqlite3 `uci get bandwidthd.@bandwidthd[0].sqlite_filename` "vacuum into '$DEST'"
 ```
 
-We’ll need to put the database file back before the service is started at boot time.  Disable auto-start with this command:
+## Startup
+
+At boot time, we’ll need to put the database file back
+into `/tmp` before the service is started.
+Disable auto-start with this command:
 
 `/etc/init.d/bandwidthd disable`
 
-Then add the following commands via LuCI → System → Startup and select the Local Startup tab.  Adjust the path as needed.
-
+Then add the following commands via **LuCI → System → Startup** on the **Local Startup** tab.  Adjust the path as needed.
 
 ```
 mkdir /tmp/bandwidthd
@@ -68,10 +91,13 @@ cp /mnt/sda1/bandwidthd/stats.db /tmp/bandwidthd
 /etc/init.d/bandwidthd start
 ```
 
+## Database cleanup
+
 The database can grow quite large over time.  It should be cleaned up on a regular basis.  The following commands can be used to clean it of older records not needed any more.  This example keeps totals for 26 weeks and details for 8 weeks.  The commands can be placed in a script and scheduled to run weekly.
 
-
-```
+```bash
+#! /bin/sh
+# Cron job to clean up the database
 TOTALWEEKS=26
 DETAILWEEKS=8
 NOWTS=`date '+%s'`
@@ -84,12 +110,16 @@ sqlite3 $DB 'DELETE FROM bd_rx_total_log WHERE timestamp < $TOTALTS;'
 sqlite3 $DB 'DELETE FROM bd_tx_total_log WHERE timestamp < $TOTALTS;'
 ```
 
-***Reporting***
+## Reporting
 
-To view the data as charts, use the IP address of your router and append “/bandwidthd” to it.  It will be something like http://192.168.1.1/bandwidthd.  
+To view the datain your browser,
+append `/bandwidthd` to the IP address of your router
+to look something like this:
+[http://192.168.1.1/bandwidthd](http://192.168.1.1/bandwidthd)  
+
+![bandwidthd-chart](./images/bandwidthd-chart.png)
 
 Note: The data for the charts does not come from the database.  So, after a power cycle, the charts will be missing older data.  However, the attached script “bandwidth_used.sh” will query the database that contains all the data.
-
 
 ```
 Syntax is: bandwidth_used.sh [arguments]
@@ -107,7 +137,6 @@ Arguments are as follows:
 ```
 
 For example, to query the daily 6 AM usage of the smart TV at 192.168.1.76, with a quota of 8 Gbytes, use this command:
-
 
 ```
 ./bandwidth_used.sh --note=TV --hour=06 --bytes=m --include=192.168.1.76 --quota=8192
@@ -127,7 +156,6 @@ Time span (from - to)	Total	Bytes	% of 8192 Mbytes
 
 To convert the report to HTML, pipe the report to the following awk command:
 
-
 ```
 awk -F '\t' 'BEGIN { print "<!DOCTYPE html><html><body><table>" }\
   { if (substr($1,1,9) == "Bandwidth")\
@@ -138,7 +166,9 @@ awk -F '\t' 'BEGIN { print "<!DOCTYPE html><html><body><table>" }\
 
 I use the HTML version of the reports for a custom page under /www/bandwidthd and for emails.  
 
-***Traffic Shaping***
+![bandwidthd-chart](./images/bandwidthd-email.png)
+
+## Traffic Shaping
 
 The “bandwidth_used.sh” returns an error code of 250 if the current time span, first row of the report, is 100% or more.  It can be used to trigger another script.  The triggered script could, for example, perform traffic shaping so as to limit the data usage for some or all devices.  
 
@@ -148,10 +178,9 @@ The attached “bandwidth_shape.sh” script uses qdisc CAKE to limit the upload
 
 Details of the script are as follows:
 
-
 ```
 Syntax is: bandwidth_shape.sh start | stop [arguments]
-Arguments are as follows:
+Arguments are:
   start | stop       Start or stop traffic shaping.  Required.
   -d --download=nbit Download speed in bits/s.  Default is 1Mbit.
   -u --upload=nbit   Upload speed in bits/s.  Default is 500Kbit.
@@ -159,11 +188,10 @@ Arguments are as follows:
   -i --include=s     Include only comma separated list of dotted IP addresses in traffic shaping.
 ```
  
-
 For example, to shape the data usage for the smart TV to the defaults, forcing it to standard definition, use the following command:
 
 `./bandwidth_shape.sh start --include=192.168.1.76` 
 
-***Summary***
+## Summary
 
-I hope others find this useful.  I have tested these procedures and scripts on OpenWrt 21.02.3.  I don’t know if they will work on older or future versions.  Also, I want to send a big thank you out to the OpenWrt team and supporters plus all the contributors on the forms for all their hard work on the awesome open source project called OpenWrt.
+I have tested these procedures and scripts on OpenWrt 21.02.3. I don’t know if they will work on older or future versions. Also, I want to send a big thank you out to the OpenWrt team and supporters plus all the contributors on the forms for all their hard work on the awesome open source project called OpenWrt.
