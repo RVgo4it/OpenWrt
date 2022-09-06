@@ -1,3 +1,4 @@
+
 ![bandwidthd-chart](./images/bandwidthd-main.png)
 
 # bandwidthd for OpenWrt
@@ -215,3 +216,4 @@ For example, to shape the data usage for the smart TV to the defaults, forcing i
 These procedures and scripts have been tested on OpenWrt 21.02.3. They may work on older or future versions.
 
 I want to send a big thank you out to the OpenWrt team and supporters plus all the contributors on the forms for all their hard work on the awesome open source project called OpenWrt.
+
