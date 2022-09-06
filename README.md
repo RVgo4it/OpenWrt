@@ -1,24 +1,25 @@
 ![bandwidthd-chart](./images/bandwidthd-main.png)
 
-# Overview of bandwidthd
+# bandwidthd for OpenWrt
 
 I have been using OpenWrt for years.
 It’s on all my routers except the one that still has Gargoyle.
 I would like to switch it over to OpenWrt.
 
-But I need to be able to report daily, weekly and monthly Internet data usage.  I also need to be able to report totals and for all or an IP subset like the smart TVs.  Also, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
+But I need to be able to report daily, weekly and monthly Internet data usage.
+I also need to be able to report totals and for all or an IP subset like the smart TVs.
+Also, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
 
 I have been searching for a while for something like this
 so I can migrate the final router from Gargoyle.
-I have not seen any posts here describing the package.
-I made these notes and scripts for my Gargoyle migration, 
+I had not seen any posts here describing the package,
+soI made these notes and scripts during
+my Gargoyle migration. 
 
-## Choice of bandwidthd-sqlite
-
-I decided to use **bandwidthd-sqlite** to collect data.
+I decided to use **bandwidthd-sqlite** to collect this data.
 The package seems to be well-supported in OpenWrt.
 The router can display reports in a web browser.
-It has nice graphs and I can easily pull the details I need from the SQLite database.
+It has built-in reports and graphs and I can easily pull the details I need from the SQLite database.
 I have created several scripts to do this at [https://github.com/RVgo4it/OpenWrt](https://github.com/RVgo4it/OpenWrt).  
 
 ## Installation and Configuration
@@ -35,7 +36,10 @@ To configure, stop the service and adjust the configuration. Use the following c
 uci show bandwidthd
 ```
 
-Confirm the subnet and interface device is correct for the router. If needed, adjust using commands like these:
+This shows the current **bandwidthd** configuration
+for the interface (or "device" - likely `br-lan`) and
+the LAN subnet (likely `192.168.1.0/24`).
+If your router is different, adjust using these commands:
 
 ```
 uci set bandwidthd.@bandwidthd[0].subnets='192.168.n.0/24'
@@ -43,18 +47,21 @@ uci set bandwidthd.@bandwidthd[0].dev='br-lan'
 uci commit bandwidthd
 ```
 
-**bandwidthd** should be configured to collect packets
-that pass through the router, ignoring traffic sent
-directly to or from the router.
-For this, we’ll need some info from the network interface.  Use this command:
+In addition, **bandwidthd** must be configured
+to collect packets that pass _through_ the router,
+while ignoring traffic sent directly to or from it.
+To do this, use this command to get info
+from the network interface.  
 
 ```
 ifconfig `uci get bandwidthd.@bandwidthd[0].dev`
 ```
  
-Make note of the MAC address (_HWaddr_)
-and the IP address (_inet addr_).
-Edit and use the following configuration commands:
+Make note of the MAC address (_HWaddr:_)
+and the IPv4 address (_inet addr:_).
+Use the configuration commands below,
+substituting the _HWaddr_ for `xx:xx:xx:xx:xx:xx` and
+the _inet addr_ for `192.168.n.1`
 
 ```
 uci set bandwidthd.@bandwidthd[0].filter='ip and ether host xx:xx:xx:xx:xx:xx and not host 192.168.n.1'
@@ -65,11 +72,15 @@ uci commit bandwidthd
 
 ## Persisting the database
 
-The default path for the SQLite database is `/tmp`, so it will be lost during a power cycle of the router.  However, we need to preserve that data.
-Insert and [format a thumb drive.](https://openwrt.org/docs/guide-user/storage/usb-drives-quickstart)
-To save a copy of the database on a regular schedule,
-create a folder on the thumb drive called `bandwidthd` and enter the following commands to **LuCI → System → Scheduled Tasks** (adjust path and schedule as needed.)
-They save a copy of the database every 10 minutes.  
+The default path for the SQLite database is `/tmp`:
+it will be lost during a power cycle of the router.  However, **bandwidthd** needs to preserve the data.
+
+To save a copy of the database to an external device,
+insert and
+[format a thumb drive.](https://openwrt.org/docs/guide-user/storage/usb-drives-quickstart)
+Create a `bandwidthd` folder on the thumb drive.
+Enter the following commands to **LuCI → System → Scheduled Tasks** (adjust path and schedule as needed.)
+This adds a command that saves a copy of the database every 10 minutes.  
 
 ```
 */10 * * * * DEST=/mnt/sda1/bandwidthd/stats.db;rm $DEST;sqlite3 `uci get bandwidthd.@bandwidthd[0].sqlite_filename` "vacuum into '$DEST'"
@@ -77,8 +88,8 @@ They save a copy of the database every 10 minutes.
 
 ## Startup
 
-At boot time, we’ll need to put the database file back
-into `/tmp` before the service is started.
+At boot time, the database file must be copied back
+into `/tmp` before the **bandwidthd** service is started.
 Disable auto-start with this command:
 
 `/etc/init.d/bandwidthd disable`
@@ -93,11 +104,12 @@ cp /mnt/sda1/bandwidthd/stats.db /tmp/bandwidthd
 
 ## Database cleanup
 
-The database can grow quite large over time.  It should be cleaned up on a regular basis.  The following commands can be used to clean it of older records not needed any more.  This example keeps totals for 26 weeks and details for 8 weeks.  The commands can be placed in a script and scheduled to run weekly.
+The database can grow quite large over time.
+The following commands can be used to clean it of older records.  This example keeps totals for 26 weeks and details for 8 weeks.  The commands can be placed in a script and scheduled to run weekly.
 
 ```bash
 #! /bin/sh
-# Cron job to clean up the database
+# Cron job to clean up the bandwidthd database
 TOTALWEEKS=26
 DETAILWEEKS=8
 NOWTS=`date '+%s'`
@@ -112,14 +124,20 @@ sqlite3 $DB 'DELETE FROM bd_tx_total_log WHERE timestamp < $TOTALTS;'
 
 ## Reporting
 
-To view the datain your browser,
+To view the data in your browser,
 append `/bandwidthd` to the IP address of your router
 to look something like this:
 [http://192.168.1.1/bandwidthd](http://192.168.1.1/bandwidthd)  
 
+You'll see a web page showing the image at the top
+of this page, as well as a chart below:
+
 ![bandwidthd-chart](./images/bandwidthd-chart.png)
 
-Note: The data for the charts does not come from the database.  So, after a power cycle, the charts will be missing older data.  However, the attached script “bandwidth_used.sh” will query the database that contains all the data.
+## Reporting scripts
+
+The data for the charts does not come from the database.  So, after a power cycle, the charts will be missing older data.  However, `bandwidth_used.sh` in this repo
+will query the database that contains all the data.
 
 ```
 Syntax is: bandwidth_used.sh [arguments]
@@ -170,9 +188,9 @@ I use the HTML version of the reports for a custom page under /www/bandwidthd an
 
 ## Traffic Shaping
 
-The “bandwidth_used.sh” returns an error code of 250 if the current time span, first row of the report, is 100% or more.  It can be used to trigger another script.  The triggered script could, for example, perform traffic shaping so as to limit the data usage for some or all devices.  
+The `bandwidth_used.sh` above returns an error code of 250 if the current time span, first row of the report, is 100% or more.  It can be used to trigger another script.  The triggered script could, for example, perform traffic shaping so as to limit the data usage for some or all devices.  
 
-The attached “bandwidth_shape.sh” script uses qdisc CAKE to limit the upload and download speed.  It needs the traffic control packages.  Use this command to install them:
+The `bandwidth_shape.sh` script in this repo uses qdisc CAKE to limit the upload and download speed.  It needs the traffic control packages.  Use this command to install them:
 
 `opkg update; opkg install tc-full kmod-ifb kmod-sched-cake`
 
@@ -194,4 +212,6 @@ For example, to shape the data usage for the smart TV to the defaults, forcing i
 
 ## Summary
 
-I have tested these procedures and scripts on OpenWrt 21.02.3. I don’t know if they will work on older or future versions. Also, I want to send a big thank you out to the OpenWrt team and supporters plus all the contributors on the forms for all their hard work on the awesome open source project called OpenWrt.
+These procedures and scripts have been tested on OpenWrt 21.02.3. They may work on older or future versions.
+
+I want to send a big thank you out to the OpenWrt team and supporters plus all the contributors on the forms for all their hard work on the awesome open source project called OpenWrt.

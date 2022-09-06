@@ -2,7 +2,7 @@
 
 For OpenWrt 21.02.3.  
 
-Syntax is: bandwidth_used.sh [arguments]<br>
+## `bandwidth_used.sh [arguments]`
 
 ```
 Arguments are:
@@ -18,7 +18,7 @@ Arguments are:
   -n --note=s        Include short note on the report title.
 ```
 
-Syntax is: bandwidth_shape.sh start | stop [arguments]
+## `bandwidth_shape.sh [ start | stop ] [arguments]`
 
 ```
 Arguments are:
