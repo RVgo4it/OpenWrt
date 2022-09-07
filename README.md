@@ -1,21 +1,23 @@
 
 ![bandwidthd-chart](./images/bandwidthd-main.png)
 
-# bandwidthd for OpenWrt
+# Bandwidth Management – Collecting, Reporting, and Shaping
 
 I have been using OpenWrt for years.
 It’s on all my routers except the one that still has Gargoyle.
 I would like to switch it over to OpenWrt.
 
-But I need to be able to report daily, weekly and monthly Internet data usage.
+However, I need to be able to report daily, weekly and monthly Internet data usage.
 I also need to be able to report totals and for all or an IP subset like the smart TVs.
-Also, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
+Finally, if usage is over a given quota, I want to restrict the bandwidth for all or just some devices.
 
 I have been searching for a while for something like this
 so I can migrate the final router from Gargoyle.
-I had not seen any posts here describing the package,
-soI made these notes and scripts during
+I had not seen any posts here describing methods to shape bandwidth based on quotas.
+So I made these notes and scripts during
 my Gargoyle migration. 
+
+## bandwidthd-sqlite
 
 I decided to use **bandwidthd-sqlite** to collect this data.
 The package seems to be well-supported in OpenWrt.
@@ -23,7 +25,7 @@ The router can display reports in a web browser.
 It has built-in reports and graphs and I can easily pull the details I need from the SQLite database.
 I have created several scripts to do this at [https://github.com/RVgo4it/OpenWrt](https://github.com/RVgo4it/OpenWrt).  
 
-## Installation and Configuration
+### Installation and Configuration
 
 To install **bandwidthd-sqlite** on OpenWrt,
 use these commands:
@@ -71,7 +73,7 @@ uci commit bandwidthd
 /etc/init.d/bandwidthd start
 ```
 
-## Persisting the database
+### Persisting the database
 
 The default path for the SQLite database is `/tmp`:
 it will be lost during a power cycle of the router.  However, **bandwidthd** needs to preserve the data.
@@ -87,7 +89,7 @@ This adds a command that saves a copy of the database every 10 minutes.
 */10 * * * * DEST=/mnt/sda1/bandwidthd/stats.db;rm $DEST;sqlite3 `uci get bandwidthd.@bandwidthd[0].sqlite_filename` "vacuum into '$DEST'"
 ```
 
-## Startup
+### Startup
 
 At boot time, the database file must be copied back
 into `/tmp` before the **bandwidthd** service is started.
@@ -103,7 +105,7 @@ cp /mnt/sda1/bandwidthd/stats.db /tmp/bandwidthd
 /etc/init.d/bandwidthd start
 ```
 
-## Database cleanup
+### Database cleanup
 
 The database can grow quite large over time.
 The following commands can be used to clean it of older records.  This example keeps totals for 26 weeks and details for 8 weeks.  The commands can be placed in a script and scheduled to run weekly.
@@ -125,6 +127,10 @@ sqlite3 $DB 'DELETE FROM bd_tx_total_log WHERE timestamp < $TOTALTS;'
 
 ## Reporting
 
+There are multiple way to view the data collected.
+
+### Charts
+
 To view the data in your browser,
 append `/bandwidthd` to the IP address of your router
 to look something like this:
@@ -135,7 +141,7 @@ of this page, as well as a chart below:
 
 ![bandwidthd-chart](./images/bandwidthd-chart.png)
 
-## Reporting scripts
+### Reporting scripts
 
 The data for the charts does not come from the database.  So, after a power cycle, the charts will be missing older data.  However, `bandwidth_used.sh` in this repo
 will query the database that contains all the data.
@@ -189,9 +195,14 @@ I use the HTML version of the reports for a custom page under /www/bandwidthd an
 
 ## Traffic Shaping
 
-The `bandwidth_used.sh` above returns an error code of 250 if the current time span, first row of the report, is 100% or more.  It can be used to trigger another script.  The triggered script could, for example, perform traffic shaping so as to limit the data usage for some or all devices.  
+The `bandwidth_used.sh` above returns an error code of 250 if the current time span, first row of the report, is 100% or more.
+It can be used to trigger another script.  
+The triggered script could, among other things, perform traffic shaping so as to limit the data usage for some or all devices.  
 
-The `bandwidth_shape.sh` script in this repo uses qdisc CAKE to limit the upload and download speed.  It needs the traffic control packages.  Use this command to install them:
+### bandwidth_shape.sh
+
+The `bandwidth_shape.sh` script in this repo uses qdisc CAKE to limit the upload and download speed.  
+It needs the traffic control packages.  Use this command to install them:
 
 `opkg update; opkg install tc-full kmod-ifb kmod-sched-cake`
 
@@ -210,6 +221,12 @@ Arguments are:
 For example, to shape the data usage for the smart TV to the defaults, forcing it to standard definition, use the following command:
 
 `./bandwidth_shape.sh start --include=192.168.1.76` 
+
+### sample_report_hourly.sh
+
+A more detailed example can be found in `sample_report_hourly.sh` included in this repo.  
+If run hourly, it will detect if a group of devices, or all devices, exceeds their quota.  
+If they do, it will limit their access to the Internet.  Once the time span for that quota expires, Internet access is restored.  
 
 ## Summary
 
