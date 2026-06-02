@@ -1,9 +1,11 @@
 #!/bin/ash
 
+6/2/2026 added -s 96 to tcpdump to reduce pcap files size
+
 # This script will simulate bandwidthd-sqlite's database.  it just looks at internet traffic.  
 # It also collects IPv6 data and mac addresses.
-# It uses tcpdump to collect packets for a pac file in one process.
-# A second process totals the sizes in those pac files for each ip/mac pair, rx and tx.
+# It uses tcpdump to collect packets for a pcap file in one process.
+# A second process totals the sizes in those pcap files for each ip/mac pair, rx and tx.
 # 3rd process imports the totals into the sqlite db.  
 
 # required:
@@ -80,7 +82,7 @@ ${TAB}option sqlite_filename "$DB"
 EOF
 # start capturing in background - ref: https://www.tcpdump.org/manpages/tcpdump.1.html
 # collects packets send/received via default route
-tcpdump -i $LOCALIF -B $BUFFKB -G $SEC -w "$CAP/%Y-%m-%d %H:%M:%S" "ether host $ROUTERMAC and ( ( ip and not ip host $ROUTERIP4 ) or ( ip6 and not ip6 host $ROUTERIP6 ) )" &
+tcpdump -i $LOCALIF -s 96 -B $BUFFKB -G $SEC -w "$CAP/%Y-%m-%d %H:%M:%S" "ether host $ROUTERMAC and ( ( ip and not ip host $ROUTERIP4 ) or ( ip6 and not ip6 host $ROUTERIP6 ) )" &
 PCAPPID=$!
 echo $(date +%H:%M:%S) PCAPPID=$PCAPPID
 
